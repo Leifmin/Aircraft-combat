@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>canvas 道具 grop</title>
+	<style type="text/css">
+		#canvas {
+			border: 1px solid;
+
+		}
+	</style>
+</head>
+<body>
+	<canvas id="canvas" width="320" height="568"></canvas>
+	<script type="text/javascript">
+		var canvas = document.getElementById("canvas");
+		var ctx = canvas.getContext("2d");
+		var cw = canvas.width;
+		var ch = canvas.height;
+
+		// 返回随机整数的函数
+		function rnd(min, max) {
+			return parseInt(Math.random() * (max - min)) + min;
+		}
+		// 1. 我方飞机构造函数
+		var Plane = function() {
+			// 我方飞机的宽高/坐标
+			this.w = 50;
+			this.h = 80;
+			this.x = (cw - this.w)/2;
+			this.y = ch - this.h;
+			this.color = "red";
+			this.speed = 4;
+			this.hp = 10;  // 飞机的血量
+			this.attact = 1; // 基本攻击力
+			this.fireSpeed = 10; // 子弹的发射速度
+		}
+		Plane.prototype.draw = function() {
+			ctx.fillStyle = this.color;
+			ctx.fillRect(this.x, this.y, this.w, this.h);
+		}
+		Plane.prototype.update = function() {
+
+			if(directions.left) {
+				this.x -= this.speed;
+			}
+			if(directions.right) {
+				this.x += this.speed;
+			}
+			if(directions.top) {
+				this.y -= this.speed;
+			}
+			if(directions.bottom) {
+				this.y += this.speed;
+			}
+			if(this.x < 0) {
+				this.x = 0;
+			}else if (this.x > (cw - this.w)) {
+				this.x = cw - this.w;
+			}
+			if(this.y < 0) {
+				this.y = 0;
+			}else if (this.y > (ch - this.h)) {
+				this.y = ch - this.h;
+			}
+		}
+
+
+		// 2. 子弹的构造函数
+		var Bullet = function() {
+			this.w = 4;
+			this.h = 8;
+			this.x = hero.x + hero.w/2 - this.w/2;
+			this.y = hero.y - this.h - 10;
+			this.color = "#000";
+			this.speed = 5;
+		}
+		Bullet.prototype.draw = function() {
+			ctx.fillStyle = this.color;
+			ctx.fillRect(this.x, this.y, this.w, this.h);
+		}
+		Bullet.prototype.update = function() {
+			this.y -= this.speed;
+		}
+
+		// 3. 敌机的构造函数
+		var Enemy = function() {
+			var enemyTypes = [{
+				w:20,
+				h:40,
+				hp: 2,
+				attact: 1,
+				color: "rgb(0, 64, 0)"
+			},{
+				w:40,
+				h:60,
+				hp: 5,
+				attact: 2,
+				color: "rgb(0, 128, 0)"
+			},{
+				w:80,
+				h:100,
+				hp: 10,
+				attact: 3,
+				color: "rgb(0, 255, 0)"
+			}];
+			this.type = rnd(0,3);
+			var enemy = enemyTypes[this.type];
+			this.w = enemy.w;
+			this.h = enemy.h;
+			this.hp = enemy.hp;
+			this.x = rnd(0, cw - this.w);
+			this.y = - this.h;
+			this.speed = 5 - this.type * 1.2;
+			this.color = enemy.color;
+		}
+		Enemy.prototype.draw = function() {
+			ctx.fillStyle = this.color;
+			ctx.fillRect(this.x, this.y, this.w, this.h);
+			ctx.fillStyle = "#fff";
+			ctx.font = "30px arial";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillText(this.hp, this.x + this.w/2, this.y + this.h/2);
+		}
+		Enemy.prototype.update = function() {
+			this.y += this.speed;
+		}
+
+		// 4. 游戏道具
+		var Prop = function() {
+			// 增强飞机能力道具
+			var propTypes = [{
+				attact: 5,
+				color: "orange"
+			}, {
+				defence: 10,
+				color: "pink"
+			},{
+				speed: 8,
+				color: "purple"
+			}];
+			
+			this.type = rnd(0, 3);
+			var prop = propTypes[this.type];
+			this.radius = 20;
+			this.x = rnd(this.radius, cw - this.radius);
+			this.y = - this.radius;
+			this.color = prop.color;
+			this.delta = 4;
+			this.attact = prop.attact || 0;
+			this.defence = prop.defence || 0;
+			this.speed = prop.speed || 0;
+			this.timer = 300;  // 道具的时候
+			this.counter = 0;
+			this.tickCounter = false;
+		}
+
+		Prop.prototype.draw = function() {
+			ctx.fillStyle = this.color;
+			ctx.beginPath();
+			ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+			ctx.closePath();
+			ctx.fill();
+		}
+		Prop.prototype.update = function() {
+			this.y += this.delta;
+		}
+
+		var hero = new Plane();
+		hero.draw();
+
+		// 控制方向的标记
+		var directions = {
+			left: false,
+			top: false,
+			right: false,
+			bottom: false
+		}
+		// 通过键盘控制飞机的运动
+		document.onkeydown = function(e) {
+			switch(e.keyCode) {
+				case 37:
+					directions.left = true;
+					break;
+				case 38:
+					directions.top = true;
+					break;
+				case 39:
+					directions.right= true;
+					break;
+				case 40:
+					directions.bottom = true;
+					break;
+			}
+		}
+		// 按键松开，飞机移动的标记位为false
+		document.onkeyup = function() {
+			directions = {
+				left: false,
+				top: false,
+				right: false,
+				bottom: false
+			}
+		}
+
+		
+		var bullets = []; // 装载所有我方子弹实例的数组
+		var tick = 0; // 控制动画帧速度的标志
+		var enemies = []; // 存放所有敌机实例的数组
+		var props = []; // 存储所有的道具的数组
+
+		function loop() {
+			tick++;
+			// 绘制图像之前，先清理之前的图像
+			canvas.width = canvas.width;
+			// 飞机的绘制
+			hero.draw();
+			// 飞机位置的更新
+			hero.update();
+
+			// 子弹实例的创建,绘制更新
+			
+			if(tick % hero.fireSpeed === 0) {
+				bullets.push(new Bullet());
+			}
+			if(tick % 50 === 0) {
+				enemies.push(new Enemy());
+			}
+			if(tick % 300 === 0) {
+				props.push(new Prop());
+			} 
+
+			bullets.forEach(function(bullet, index) {
+				bullet.draw();
+				bullet.update();
+			})
+			bullets.forEach(function(bullet, index) {
+				// kill bullet 超出屏幕子弹溢出
+				if(bullet.y < 0) {
+					bullets.splice( index, 1)
+				}
+			})
+			
+			enemies.forEach(function(enemy, index) {
+				// 此处的循环遍历只执行绘制跟更新状态的操作
+				enemy.draw();
+				enemy.update();
+				if(crash(enemy, hero)) {
+					// 判断敌机跟我方飞机的碰撞
+					if(hero.superman) {
+						console.log("无敌状态")
+					}else {
+						hero.color = "blue";	
+					}
+					
+				}
+
+				bullets.forEach(function(bullet) {
+					if(crash(enemy, bullet)) {
+						// enemy.color = "yellow";
+						// 将碰撞上的子弹跟敌机移除到屏幕之外
+						// enemy.y = ch;
+						// bullet.y = - bullet.h;
+						enemy.hp -= hero.attact;
+						if(enemy.hp <= 0) {
+							enemy.y = ch;
+						}
+						bullet.y = - bullet.h;
+					}
+				})
+			})
+			enemies.forEach(function(enemy, index) {
+				// 此处为删除超出屏幕的敌机
+				if(enemy.y > ch) {
+					enemies.splice( index, 1)
+				}
+			})
+
+
+			props.forEach(function(prop) {
+				
+				prop.draw();
+				prop.update();
+
+				if(prop.tickCounter) {
+					prop.counter ++;
+				}
+				if(crashCircle(prop, hero)) {
+					prop.tickCounter = true;
+					console.log(1);
+					switch(prop.type) {
+						case 0:
+							hero.attact += prop.attact;
+							break;
+						case 1:
+							hero.superman = true;
+							break;
+						case 2:
+							hero.fireSpeed -= prop.speed;
+							if(hero.fireSpeed <= 2) {
+								hero.fireSpeed = 2
+							}
+							// console.log(hero.fireSpeed)
+							break;
+					}
+					prop.y = ch + prop.radius;
+				}
+				
+			})
+
+			props.forEach(function(prop) {
+
+				if(prop.counter >= prop.timer) {
+					switch(prop.type) {
+						case 0:
+							hero.attact = 1;
+							break;
+						case 1:
+							delete hero.superman;
+							break;
+						case 2:
+							hero.fireSpeed = 10;
+							break;
+					}
+					props.splice(prop, 1);
+				}
+			})
+
+			id = requestAnimationFrame(loop);
+		}
+		var id = requestAnimationFrame(loop);
+
+		// 碰撞检测
+		function crash(o1, o2) {
+			// 块的右边都大于左边，块的下边都大于上边
+			if((o1.x + o1.w) >= o2.x && (o2.x + o2.w) >= o1.x && (o1.y + o1.h) >= o2.y && (o2.y + o2.h) >= o1.y) {
+				return true;
+			}
+		}
+		function crashCircle(circle, o2) {
+			// 判断圆跟矩形的碰撞
+			// 实质上判断圆心到矩形。。。
+			if((circle.x  + circle.radius) >= o2.x && (o2.x + o2.w) >= (circle.x - circle.radius) && (circle.y + circle.radius) >= o2.y && (o2.y + o2.h) >= (circle.y - circle.radius)) {
+				return true;
+			}
+		}
+	</script>
+</body>
+</html>
